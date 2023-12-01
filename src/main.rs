@@ -1,17 +1,46 @@
 use std::fs::File;
 use std::io::{self, BufRead};
 use std::path::Path;
+use std::collections::HashMap;
 use clap::Parser;
 use clap::Subcommand;
 
-
 fn calculate_calibrations(line: &str) -> Option<i32> {
-    let digits: Vec<char> = line.chars().filter(|x| x.is_numeric()).collect();
+    let searches: HashMap<&str, i32> = HashMap::from([
+        ("1", 1),
+        ("2", 2),
+        ("3", 3),
+        ("4", 4),
+        ("5", 5),
+        ("6", 6),
+        ("7", 7),
+        ("8", 8),
+        ("9", 9),
+        ("one", 1),
+        ("two", 2),
+        ("three", 3),
+        ("four", 4),
+        ("five", 5),
+        ("six", 6),
+        ("seven", 7),
+        ("eight", 8),
+        ("nine", 9),
+    ]);
 
-    if let Some(first) = digits.first() {
-        if let Some(last) = digits.last() {
-            let as_string = format!("{first}{last}").to_owned();
-            return Some(as_string.parse::<i32>().unwrap());
+    let mut indexes: Vec<(usize, &str)> = searches
+        .iter()
+        .flat_map(|s| line.match_indices(s.0))
+        .collect();
+    indexes.sort_by(|a, b| a.0.cmp(&b.0));
+
+    if let Some((_, first_match)) = indexes.first() {
+        if let Some((_, last_match)) = indexes.last() {
+            if let Some(first) = searches.get(first_match) {
+                if let Some(last) = searches.get(last_match) {
+                    let as_string = format!("{first}{last}").to_owned();
+                    return Some(as_string.parse::<i32>().unwrap());
+                }
+            }
         }
     }
 
@@ -27,9 +56,8 @@ struct Args {
 #[derive(Subcommand)]
 enum Command {
     Day1 { input_path: String },
-    Day2 {}
+    Day2 {},
 }
-
 
 fn main() {
     println!("Saving Christmas, one day at a time.");
@@ -52,11 +80,12 @@ fn main() {
     }
 }
 
-
 // The output is wrapped in a Result to allow matching on errors
 // Returns an Iterator to the Reader of the lines of the file.
 fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
-where P: AsRef<Path>, {
+where
+    P: AsRef<Path>,
+{
     let file = File::open(filename)?;
     Ok(io::BufReader::new(file).lines())
 }
@@ -66,10 +95,13 @@ mod test {
     #[test]
     fn day1_example() {
         let example = "
-        1abc2
-        pqr3stu8vwx
-        a1b2c3d4e5f
-        treb7uchet
+        two1nine
+        eightwothree
+        abcone2threexyz
+        xtwone3four
+        4nineeightseven2
+        zoneight234
+        7pqrstsixteen
         ";
 
         let mut calibrations = Vec::<i32>::new();
@@ -80,6 +112,6 @@ mod test {
             }
         }
 
-        assert_eq!(calibrations, [12, 38, 15, 77])
+        assert_eq!(calibrations, [29, 83, 13, 24, 42, 14, 76])
     }
 }
